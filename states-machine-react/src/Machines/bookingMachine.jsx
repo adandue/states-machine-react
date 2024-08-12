@@ -1,13 +1,26 @@
-import { assign, createMachine } from "xstate";
+import { assign, createMachine, fromPromise } from "xstate";
+import { fetchCountries } from "../Utils/api";
 
 const fillCountries = {
     initial: 'loading',
     states: {
         loading: {
-            on: {
-                DONE: 'success',
-                ERROR: 'failure'
-            },
+            invoke: {
+                id: 'getCountries',
+                src: fromPromise(() => fetchCountries()),
+                onDone: {
+                    target: 'success',
+                    actions: assign({
+                    countries: ({ event }) => event.output,
+                    })
+                },
+                onError: {
+                    target: 'failure',
+                    actions: assign({
+                    error: 'Falló el request'
+                    })
+                }
+            }
         },
         success: {},
         failure: {
@@ -24,6 +37,8 @@ const bookingMachine = createMachine({
     context: {
         passengers: [],
         selectedCountry: '',
+        countries: [],
+        error: '',
     },
     states: {
         initial: {
@@ -52,6 +67,11 @@ const bookingMachine = createMachine({
             ...fillCountries,
         },
         tickets: {
+            after: {
+                5000: {
+                    target: 'initial'
+                }
+            },
             on: {
             FINISH: "initial",
             },
