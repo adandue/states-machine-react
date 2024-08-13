@@ -42,12 +42,6 @@ const bookingMachine = createMachine({
     },
     states: {
         initial: {
-            entry: assign(
-                ({context}) => {
-                    context.passengers = [],
-                    context.selectedCountry = ''
-                }
-            ),
             on: {
             START: {
                 target:'search',
@@ -55,6 +49,12 @@ const bookingMachine = createMachine({
             },
         },
         search: {
+            initial: 'fillCountries',
+            states: {
+                fillCountries:{
+                    ...fillCountries
+                }
+            },
             on: {
             CONTINUE: {
                 target: 'passengers',
@@ -64,12 +64,12 @@ const bookingMachine = createMachine({
             },
             CANCEL: "initial",
             },
-            ...fillCountries,
         },
         tickets: {
             after: {
                 5000: {
-                    target: 'initial'
+                    target: 'initial',
+                    actions: 'cleanContext'
                 }
             },
             on: {
@@ -78,8 +78,14 @@ const bookingMachine = createMachine({
         },
         passengers: {
             on: {
-            DONE: "tickets",
-            CANCEL: "initial",
+            DONE: {
+                target: 'tickets',
+                guard: 'moreThanOnePassenger'
+            },
+            CANCEL: {
+                target: 'initial',
+                actions: 'cleanContext'
+            },
             ADD: {
                 target: 'passengers',
                 actions: assign(
@@ -93,9 +99,16 @@ const bookingMachine = createMachine({
     },
     {
         actions: {
-            imprimirInicio: () => console.log('Imprimir Inicio'),
-            imprimirEntrada: () => console.log('Imprimir Entrada a search'),
-            imprimirSalida: () => console.log('Imprimir Salida del search')
+            cleanContext: assign({
+                selectedCountry: '',
+                passengers: []
+            })
+        },
+        guards: {
+            moreThanOnePassenger: (context) => {
+                console.log(context.passengers.length)
+                return context.passengers.length > 0
+            }
         },
     }
 );
